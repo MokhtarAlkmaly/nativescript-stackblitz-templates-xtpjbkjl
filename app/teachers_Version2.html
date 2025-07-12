@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>إدارة المعلمين</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Bootstrap RTL -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .card { margin-bottom: 20px; }
+        .table th, .table td { vertical-align: middle; }
+        .nav-btns .btn { margin-left: 10px; }
+    </style>
+</head>
+<body>
+<div class="container my-4">
+
+    <!-- رأس الصفحة: عنوان وأزرار تنقل -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>سجل إدارة المعلمين</h3>
+        <div class="nav-btns">
+            <a href="students.html" class="btn btn-primary">صفحة الطلاب</a>
+            <a href="followup.html" class="btn btn-info">نظام المتابعة</a>
+            <a href="reports.html" class="btn btn-secondary">التقارير</a>
+            <a href="documents.html" class="btn btn-dark">الوثائق</a>
+        </div>
+    </div>
+
+    <!-- زر إضافة معلم جديد -->
+    <div class="mb-3 text-end">
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addTeacherModal">إضافة معلم جديد</button>
+    </div>
+
+    <!-- جدول المعلمين -->
+    <div class="card">
+        <div class="card-header">قائمة المعلمين</div>
+        <div class="card-body">
+            <table class="table table-bordered" id="teachersTable">
+                <thead>
+                    <tr>
+                        <th>اسم المعلم</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- بيانات المعلمين ستملأ ديناميكياً -->
+                    <!-- مثال لسطر معلم -->
+                    <!-- <tr>
+                        <td>أ. خالد</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="openEditTeacherModal(1)">تعديل</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteTeacher(1)">حذف</button>
+                        </td>
+                    </tr> -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- نموذج منبثق: إضافة/تعديل معلم -->
+    <div class="modal fade" id="addTeacherModal" tabindex="-1" aria-labelledby="addTeacherModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form class="modal-content" id="teacherForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addTeacherModalLabel">إضافة/تعديل بيانات معلم</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label">اسم المعلم</label>
+                        <input type="text" class="form-control" name="teacherName" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- مثال JS لإدارة المعلمين -->
+<script>
+    let editingTeacherId = null;
+
+    function loadTeachers() {
+        fetch('http://localhost:3000/api/teachers')
+        .then(res => res.json())
+        .then(list => {
+            let tbody = document.querySelector('#teachersTable tbody');
+            tbody.innerHTML = '';
+            list.forEach(t => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${t.name}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="openEditTeacherModal(${t.id}, '${t.name}')">تعديل</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteTeacher(${t.id})">حذف</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        });
+    }
+
+    function openEditTeacherModal(id, name) {
+        editingTeacherId = id;
+        document.getElementById('addTeacherModalLabel').innerText = 'تعديل بيانات معلم';
+        document.querySelector('[name=teacherName]').value = name || '';
+        var modal = new bootstrap.Modal(document.getElementById('addTeacherModal'));
+        modal.show();
+    }
+
+    function deleteTeacher(id) {
+        if (confirm('هل أنت متأكد من حذف المعلم؟')) {
+            fetch(`http://localhost:3000/api/teachers/${id}`, {method:'DELETE'})
+            .then(() => loadTeachers());
+        }
+    }
+
+    document.getElementById('teacherForm').onsubmit = function(e) {
+        e.preventDefault();
+        let data = { name: this.teacherName.value };
+        let url = 'http://localhost:3000/api/teachers';
+        let method = 'POST';
+        if (editingTeacherId) {
+            url += `/${editingTeacherId}`;
+            method = 'PUT';
+        }
+        fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)})
+        .then(() => {
+            editingTeacherId = null;
+            this.reset();
+            loadTeachers();
+            bootstrap.Modal.getInstance(document.getElementById('addTeacherModal')).hide();
+        });
+    };
+
+    loadTeachers();
+</script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>إدارة الطلاب</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container my-4">
+    <h3 class="mb-3">سجل إدارة الطلاب</h3>
+    <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addStudentModal">إضافة طالب جديد</button>
+    <table class="table table-bordered" id="studentsTable">
+        <thead>
+            <tr>
+                <th>اسم الطالب</th>
+                <th>رقم الهوية</th>
+                <th>تاريخ التسجيل</th>
+                <th>المعلم</th>
+                <th>مقدار الحفظ عند التسجيل</th>
+                <th>الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <!-- نموذج منبثق لإضافة/تعديل طالب -->
+    <div class="modal fade" id="addStudentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form class="modal-content" id="studentForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">إضافة/تعديل بيانات طالب</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <div class="col-md-12">
+                        <label>اسم الطالب</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label>رقم الهوية</label>
+                        <input type="text" class="form-control" name="national_id" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label>تاريخ التسجيل (هجري)</label>
+                        <input type="text" class="form-control" name="registration_hijri" required>
+                    </div>
+                    <div class="col-md-12">
+                        <label>اختيار المعلم</label>
+                        <select class="form-select" name="teacher_id" id="teacherSelect"></select>
+                    </div>
+                    <div class="col-md-12">
+                        <label>مقدار الحفظ عند التسجيل</label>
+                        <input type="text" class="form-control" name="memorized_at_registration">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let editingId = null;
+function loadTeachers() {
+    fetch('http://localhost:3000/api/teachers').then(r=>r.json()).then(list=>{
+        let sel = document.getElementById('teacherSelect');
+        sel.innerHTML = '';
+        list.forEach(t=>sel.innerHTML += `<option value="${t.id}">${t.name}</option>`);
+    });
+}
+function loadStudents() {
+    fetch('http://localhost:3000/api/students').then(r=>r.json()).then(list=>{
+        let tbody = document.querySelector('#studentsTable tbody');
+        tbody.innerHTML = '';
+        list.forEach(s=>{
+            tbody.innerHTML += `
+            <tr>
+                <td><a href="followup.html?student_id=${s.id}" class="text-primary">${s.name}</a></td>
+                <td>${s.national_id}</td>
+                <td>${s.registration_hijri}</td>
+                <td>${s.teacher_name||''}</td>
+                <td>${s.memorized_at_registration||''}</td>
+                <td>
+                    <button class="btn btn-sm btn-warning" onclick="editStudent(${s.id})">تعديل</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteStudent(${s.id})">حذف</button>
+                </td>
+            </tr>
+            `;
+        })
+    });
+}
+function editStudent(id) {
+    editingId = id;
+    fetch(`http://localhost:3000/api/students`).then(r=>r.json()).then(list=>{
+        let s = list.find(x=>x.id==id);
+        let form = document.getElementById('studentForm');
+        form.name.value = s.name;
+        form.national_id.value = s.national_id;
+        form.registration_hijri.value = s.registration_hijri;
+        form.teacher_id.value = s.teacher_id;
+        form.memorized_at_registration.value = s.memorized_at_registration;
+        new bootstrap.Modal(document.getElementById('addStudentModal')).show();
+    });
+}
+function deleteStudent(id) {
+    if(confirm('هل أنت متأكد من حذف الطالب؟')) {
+        fetch(`http://localhost:3000/api/students/${id}`, {method:'DELETE'})
+        .then(()=>loadStudents());
+    }
+}
+document.getElementById('studentForm').onsubmit = function(e) {
+    e.preventDefault();
+    let data = {
+        name: this.name.value,
+        national_id: this.national_id.value,
+        registration_hijri: this.registration_hijri.value,
+        teacher_id: this.teacher_id.value,
+        memorized_at_registration: this.memorized_at_registration.value
+    };
+    let url = 'http://localhost:3000/api/students';
+    let method = 'POST';
+    if(editingId) {
+        url += `/${editingId}`;
+        method = 'PUT';
+    }
+    fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)})
+    .then(()=>{editingId=null; this.reset(); loadStudents(); new bootstrap.Modal(document.getElementById('addStudentModal')).hide();});
+};
+loadTeachers();
+loadStudents();
+</script>
+</body>
+</html>

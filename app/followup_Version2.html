@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>متابعة الحفظ للطالب</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container my-4">
+    <h3>نظام متابعة الحفظ والمراجعة</h3>
+    <div id="studentInfo" class="mb-3"></div>
+    <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addFollowupModal">تسجيل متابعة جديدة</button>
+    <table class="table table-bordered" id="followupTable">
+        <thead>
+            <tr>
+                <th>الشهر</th>
+                <th>مقرر الحفظ</th>
+                <th>من سورة/آية</th>
+                <th>إلى سورة/آية</th>
+                <th>عدد الأوجه</th>
+                <th>مقرر المراجعة</th>
+                <th>عدد أوجه المراجعة</th>
+                <th>درجات الحفظ</th>
+                <th>درجات المراجعة</th>
+                <th>الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <!-- نموذج منبثق لإضافة/تعديل متابعة -->
+    <div class="modal fade" id="addFollowupModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form class="modal-content" id="followupForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">تسجيل/تعديل متابعة شهرية</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <div class="col-md-6">
+                        <label>الشهر الهجري</label>
+                        <input type="text" class="form-control" name="month_hijri" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label>العام الهجري</label>
+                        <input type="text" class="form-control" name="year_hijri" required>
+                    </div>
+                    <div class="col-md-12">
+                        <label>المعلم</label>
+                        <select class="form-select" name="teacher_id" id="followupTeacherSelect"></select>
+                    </div>
+                    <div class="col-md-12">
+                        <label>مقرر الحفظ</label>
+                        <input type="text" class="form-control" name="memorize_plan">
+                    </div>
+                    <div class="col-md-6">
+                        <label>من سورة</label>
+                        <input type="text" class="form-control" name="from_surah">
+                    </div>
+                    <div class="col-md-6">
+                        <label>من آية</label>
+                        <input type="text" class="form-control" name="from_ayah">
+                    </div>
+                    <div class="col-md-6">
+                        <label>إلى سورة</label>
+                        <input type="text" class="form-control" name="to_surah">
+                    </div>
+                    <div class="col-md-6">
+                        <label>إلى آية</label>
+                        <input type="text" class="form-control" name="to_ayah">
+                    </div>
+                    <div class="col-md-6">
+                        <label>عدد الأوجه</label>
+                        <input type="number" class="form-control" name="memorize_faces">
+                    </div>
+                    <div class="col-md-6">
+                        <label>مقرر المراجعة</label>
+                        <input type="text" class="form-control" name="review_plan">
+                    </div>
+                    <div class="col-md-6">
+                        <label>عدد أوجه المراجعة</label>
+                        <input type="number" class="form-control" name="review_faces">
+                    </div>
+                    <div class="col-md-4">
+                        <label>درجة الحفظ</label>
+                        <input type="number" class="form-control" name="memorize_grade" min="0" max="25">
+                    </div>
+                    <div class="col-md-4">
+                        <label>درجة التلاوة</label>
+                        <input type="number" class="form-control" name="tajweed_grade" min="0" max="15">
+                    </div>
+                    <div class="col-md-4">
+                        <label>درجة المحصلة</label>
+                        <input type="number" class="form-control" name="result_grade" min="0" max="10">
+                    </div>
+                    <div class="col-md-4">
+                        <label>درجة مراجعة الحفظ</label>
+                        <input type="number" class="form-control" name="review_grade" min="0" max="25">
+                    </div>
+                    <div class="col-md-4">
+                        <label>درجة مراجعة التلاوة</label>
+                        <input type="number" class="form-control" name="review_tajweed_grade" min="0" max="15">
+                    </div>
+                    <div class="col-md-4">
+                        <label>درجة مراجعة المحصلة</label>
+                        <input type="number" class="form-control" name="review_result_grade" min="0" max="10">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const student_id = urlParams.get('student_id');
+let editingFollowupId = null;
+
+function loadTeachers() {
+    fetch('http://localhost:3000/api/teachers').then(r=>r.json()).then(list=>{
+        let sel = document.getElementById('followupTeacherSelect');
+        sel.innerHTML = '';
+        list.forEach(t=>sel.innerHTML += `<option value="${t.id}">${t.name}</option>`);
+    });
+}
+
+function loadStudent() {
+    fetch('http://localhost:3000/api/students').then(r=>r.json()).then(list=>{
+        let s = list.find(x=>x.id==student_id);
+        if(s) {
+            document.getElementById('studentInfo').innerHTML = `
+                <div class="card">
+                  <div class="card-body">
+                    <h5>اسم الطالب: ${s.name}</h5>
+                    <p>الهوية: ${s.national_id} | تاريخ التسجيل: ${s.registration_hijri} | معلم: ${s.teacher_name||''}</p>
+                    <p>مقدار الحفظ عند التسجيل: ${s.memorized_at_registration||''}</p>
+                  </div>
+                </div>
+            `;
+        }
+    });
+}
+
+function loadFollowups() {
+    fetch(`http://localhost:3000/api/followups/${student_id}`).then(r=>r.json()).then(list=>{
+        let tbody = document.querySelector('#followupTable tbody');
+        tbody.innerHTML = '';
+        list.forEach(f=>{
+            tbody.innerHTML += `
+            <tr>
+              <td>${f.month_hijri}</td>
+              <td>${f.memorize_plan}</td>
+              <td>${f.from_surah} (${f.from_ayah})</td>
+              <td>${f.to_surah} (${f.to_ayah})</td>
+              <td>${f.memorize_faces}</td>
+              <td>${f.review_plan}</td>
+              <td>${f.review_faces}</td>
+              <td>${f.memorize_grade}/${f.tajweed_grade}/${f.result_grade}</td>
+              <td>${f.review_grade}/${f.review_tajweed_grade}/${f.review_result_grade}</td>
+              <td>
+                <button class="btn btn-sm btn-warning" onclick="editFollowup(${f.id})">تعديل</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteFollowup(${f.id})">حذف</button>
+              </td>
+            </tr>`;
+        });
+    });
+}
+
+function editFollowup(id) {
+    editingFollowupId = id;
+    fetch(`http://localhost:3000/api/followups/${student_id}`).then(r=>r.json()).then(list=>{
+        let f = list.find(x=>x.id==id);
+        let form = document.getElementById('followupForm');
+        Object.keys(f).forEach(key=>{
+            if(form[key]) form[key].value = f[key];
+        });
+        new bootstrap.Modal(document.getElementById('addFollowupModal')).show();
+    });
+}
+
+function deleteFollowup(id) {
+    if(confirm('هل تريد حذف المتابعة؟')) {
+        fetch(`http://localhost:3000/api/followups/${id}`, {method:'DELETE'})
+        .then(()=>loadFollowups());
+    }
+}
+
+document.getElementById('followupForm').onsubmit = function(e) {
+    e.preventDefault();
+    let data = Object.fromEntries(new FormData(this));
+    data.student_id = student_id;
+    let url = 'http://localhost:3000/api/followups';
+    let method = 'POST';
+    if(editingFollowupId) {
+        url += `/${editingFollowupId}`;
+        method = 'PUT';
+    }
+    fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)})
+    .then(()=>{editingFollowupId=null; this.reset(); loadFollowups(); new bootstrap.Modal(document.getElementById('addFollowupModal')).hide();});
+};
+
+loadTeachers();
+loadStudent();
+loadFollowups();
+</script>
+</body>
+</html>
